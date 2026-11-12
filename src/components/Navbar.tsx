@@ -44,11 +44,20 @@ const Navbar = () => {
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
-    const target = document.querySelector(href);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth' });
-    }
     setIsMobileMenuOpen(false);
+
+    const targetId = href.replace('#', '');
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      const navOffset = 64;
+      const elementPosition = targetElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - navOffset;
+
+      window.scrollTo({
+        top: offsetPosition > 0 ? offsetPosition : 0,
+        behavior: 'smooth',
+      });
+    }
   };
 
   return (
@@ -64,7 +73,7 @@ const Navbar = () => {
         <a
           href="#home"
           onClick={(e) => handleNavClick(e, '#home')}
-          className="flex items-baseline gap-2 text-2xl sm:text-3xl font-black text-white tracking-tight hover:text-yellow-400 transition-colors flex-shrink-0"
+          className="flex items-baseline gap-2 text-2xl sm:text-3xl font-black text-white tracking-tight hover:text-yellow-400 transition-colors flex-shrink-0 touch-manipulation"
         >
           <span>PRASATH</span>
           <span className="text-yellow-400">S</span>
@@ -101,9 +110,14 @@ const Navbar = () => {
         {/* Mobile Hamburger Toggle */}
         <div className="lg:hidden flex items-center">
           <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-gray-300 hover:text-white focus:outline-none"
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setIsMobileMenuOpen((prev) => !prev);
+            }}
+            className="p-2 text-gray-300 hover:text-white focus:outline-none touch-manipulation cursor-pointer"
             aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
@@ -126,8 +140,10 @@ const Navbar = () => {
                   key={link.href}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`text-sm font-semibold tracking-wider py-1.5 transition-colors ${
-                    activeSection === link.id ? 'text-yellow-400' : 'text-gray-300 hover:text-white'
+                  className={`text-sm font-semibold tracking-wider py-2 block transition-colors touch-manipulation cursor-pointer ${
+                    activeSection === link.id
+                      ? 'text-yellow-400'
+                      : 'text-gray-300 active:text-yellow-400 hover:text-white'
                   }`}
                 >
                   {link.label}
@@ -137,7 +153,7 @@ const Navbar = () => {
                 <a
                   href="#contact"
                   onClick={(e) => handleNavClick(e, '#contact')}
-                  className="btn-hire text-center w-full text-sm py-2.5"
+                  className="btn-hire text-center w-full text-sm py-2.5 touch-manipulation cursor-pointer"
                 >
                   Hire Me
                 </a>
