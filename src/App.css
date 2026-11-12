@@ -1,0 +1,12 @@
+/* Clean Charcoal Theme Core Styles */
+
+#root {
+  min-height: 100vh;
+  background-color: #2d2d2d;
+  color: #ffffff;
+}
+
+section {
+  position: relative;
+  width: 100%;
+}
