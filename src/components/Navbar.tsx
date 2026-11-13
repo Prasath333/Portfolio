@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -6,9 +6,6 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
-
-  const lastNavTime = useRef<number>(0);
-  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,60 +50,36 @@ const Navbar = () => {
     { href: '#contact', id: 'contact', label: 'CONTACT' },
   ];
 
-  const navigateToSection = (href: string) => {
-    const now = Date.now();
-    if (now - lastNavTime.current < 250) return;
-    lastNavTime.current = now;
-
-    setIsMobileMenuOpen(false);
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
 
     const targetId = href.replace('#', '');
+    setActiveSection(targetId);
+
+    // 1. Initiate navigation scroll first
     if (targetId === 'home') {
       window.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
-      return;
-    }
+    } else {
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        const navOffset = window.innerWidth < 640 ? 60 : 64;
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.scrollY - navOffset;
 
-    const targetElement = document.getElementById(targetId);
-    if (targetElement) {
-      const navOffset = window.innerWidth < 640 ? 60 : 64;
-      const elementPosition = targetElement.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - navOffset;
-
-      window.scrollTo({
-        top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
-    navigateToSection(href);
-  };
-
-  const handleMobileTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-  };
-
-  const handleMobileTouchEnd = (e: React.TouchEvent<HTMLAnchorElement>, href: string) => {
-    if (!touchStartPos.current) return;
-    if (e.changedTouches.length > 0) {
-      const touch = e.changedTouches[0];
-      const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
-      const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
-      touchStartPos.current = null;
-
-      // Tap detection: less than 10px of movement qualifies as a clean tap (not a scroll)
-      if (deltaX < 10 && deltaY < 10) {
-        e.preventDefault();
-        navigateToSection(href);
+        window.scrollTo({
+          top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
+          behavior: 'smooth',
+        });
       }
     }
+
+    // 2. Automatically close the mobile drawer after navigation is initiated
+    setTimeout(() => {
+      setIsMobileMenuOpen(false);
+    }, 60);
   };
 
   return (
@@ -188,8 +161,6 @@ const Navbar = () => {
                 <a
                   key={link.href}
                   href={link.href}
-                  onTouchStart={handleMobileTouchStart}
-                  onTouchEnd={(e) => handleMobileTouchEnd(e, link.href)}
                   onClick={(e) => handleNavClick(e, link.href)}
                   className={`text-sm font-semibold tracking-wider py-2 block transition-colors touch-manipulation cursor-pointer ${
                     activeSection === link.id
@@ -203,8 +174,6 @@ const Navbar = () => {
               <div className="pt-2 flex flex-col gap-2.5">
                 <a
                   href="#contact"
-                  onTouchStart={handleMobileTouchStart}
-                  onTouchEnd={(e) => handleMobileTouchEnd(e, '#contact')}
                   onClick={(e) => handleNavClick(e, '#contact')}
                   className="btn-hire text-center w-full text-sm py-2.5 touch-manipulation cursor-pointer"
                 >

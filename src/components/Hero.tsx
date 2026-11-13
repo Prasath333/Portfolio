@@ -18,7 +18,7 @@ const Hero = () => {
   return (
     <section
       id="home"
-      className="relative min-h-[calc(100vh-4.5rem)] lg:min-h-screen bg-[#2b2b2b] flex flex-col justify-between pt-24 sm:pt-28 lg:pt-16 pb-0 overflow-hidden w-full"
+      className="relative min-h-[calc(100vh-4.5rem)] lg:min-h-screen bg-[#2b2b2b] flex flex-col justify-between pt-16 sm:pt-20 lg:pt-16 pb-8 sm:pb-10 lg:pb-0 overflow-hidden w-full"
     >
       {/* Subtle Studio Backlight behind Portrait */}
       <div className="absolute top-1/4 right-5 lg:right-20 w-[360px] sm:w-[480px] lg:w-[560px] h-[360px] sm:h-[480px] lg:h-[560px] bg-yellow-400/5 rounded-full blur-[100px] pointer-events-none -z-0" />
@@ -31,7 +31,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:col-span-7 min-w-0 flex flex-col justify-center py-8 lg:py-16 self-center"
+            className="lg:col-span-7 min-w-0 flex flex-col justify-center pt-3 pb-6 sm:pt-4 sm:pb-8 lg:py-16 self-center"
           >
             {/* Greeting in Warm Yellow */}
             <motion.p
