@@ -8,6 +8,25 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const targetId = href.replace('#', '');
+    if (targetId === 'home') {
+      scrollToTop();
+      return;
+    }
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      const navOffset = window.innerWidth < 640 ? 60 : 64;
+      const elementPosition = targetElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - navOffset;
+      window.scrollTo({
+        top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   const navLinks = [
     { label: 'HOME', href: '#home' },
     { label: 'ABOUT', href: '#about' },
@@ -84,6 +103,7 @@ const Footer = () => {
               <a
                 key={idx}
                 href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 {link.label}

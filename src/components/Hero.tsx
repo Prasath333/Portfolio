@@ -2,10 +2,23 @@ import { motion } from 'framer-motion';
 import profileImage from '../assets/Confident Portrait in White Shirt.png';
 
 const Hero = () => {
+  const handleHireClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const contactElement = document.getElementById('contact');
+    if (contactElement) {
+      const navOffset = window.innerWidth < 640 ? 60 : 64;
+      const elementPosition = contactElement.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - navOffset;
+      window.scrollTo({
+        top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
+        behavior: 'smooth',
+      });
+    }
+  };
   return (
     <section
       id="home"
-      className="relative min-h-[calc(100vh-4.5rem)] lg:min-h-screen bg-[#2b2b2b] flex flex-col justify-between pt-24 sm:pt-28 lg:pt-16 pb-0 overflow-hidden w-full border-b border-white/5"
+      className="relative min-h-[calc(100vh-4.5rem)] lg:min-h-screen bg-[#2b2b2b] flex flex-col justify-between pt-24 sm:pt-28 lg:pt-16 pb-0 overflow-hidden w-full"
     >
       {/* Subtle Studio Backlight behind Portrait */}
       <div className="absolute top-1/4 right-5 lg:right-20 w-[360px] sm:w-[480px] lg:w-[560px] h-[360px] sm:h-[480px] lg:h-[560px] bg-yellow-400/5 rounded-full blur-[100px] pointer-events-none -z-0" />
@@ -64,6 +77,7 @@ const Hero = () => {
             >
               <a
                 href="#contact"
+                onClick={handleHireClick}
                 className="btn-hire flex-shrink-0"
               >
                 Hire Me
