@@ -1,29 +1,39 @@
 import { ArrowUp, Mail } from 'lucide-react';
 import { FaGithub, FaLinkedin, FaWhatsapp } from 'react-icons/fa';
 
+/** rAF-based smooth scroll with easeInOutQuad — works on all mobile browsers. */
+const smoothScrollTo = (targetY: number, duration = 650) => {
+  const startY = window.scrollY;
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 1) return;
+  const startTime = performance.now();
+  const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+  const step = (now: number) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    window.scrollTo(0, Math.round(startY + distance * ease(progress)));
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+};
+
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const scrollToTop = () => smoothScrollTo(0);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     const targetId = href.replace('#', '');
     if (targetId === 'home') {
-      scrollToTop();
+      smoothScrollTo(0);
       return;
     }
     const targetElement = document.getElementById(targetId);
     if (targetElement) {
       const navOffset = window.innerWidth < 640 ? 60 : 64;
-      const elementPosition = targetElement.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - navOffset;
-      window.scrollTo({
-        top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
-        behavior: 'smooth',
-      });
+      const offsetPosition =
+        targetElement.getBoundingClientRect().top + window.scrollY - navOffset;
+      smoothScrollTo(offsetPosition > 0 ? Math.round(offsetPosition) : 0);
     }
   };
 

@@ -49,18 +49,44 @@ const Navbar = () => {
     { href: '#contact', id: 'contact', label: 'CONTACT' },
   ];
 
-  /** Scroll to section — shared by desktop and mobile. */
+  /**
+   * Custom rAF-based smooth scroll with easeInOutQuad easing.
+   * Works on ALL mobile browsers including older iOS Safari & Android WebView
+   * where window.scrollTo({ behavior:'smooth' }) either jumps or is unsupported.
+   */
+  const smoothScrollTo = (targetY: number, duration = 650) => {
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    if (Math.abs(distance) < 1) return; // already there
+    const startTime = performance.now();
+
+    // easeInOutQuad — feels natural on mobile
+    const ease = (t: number) =>
+      t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, Math.round(startY + distance * ease(progress)));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
+  };
+
+  /** Resolve scroll target Y for a section id. */
+  const getTargetY = (targetId: string): number => {
+    if (targetId === 'home') return 0;
+    const el = document.getElementById(targetId);
+    if (!el) return 0;
+    const navOffset = window.innerWidth < 640 ? 60 : 64;
+    const top = el.getBoundingClientRect().top + window.scrollY - navOffset;
+    return top > 0 ? Math.round(top) : 0;
+  };
+
+  /** Scroll to section — used by both desktop and mobile. */
   const scrollToSection = (targetId: string) => {
-    if (targetId === 'home') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      const el = document.getElementById(targetId);
-      if (el) {
-        const navOffset = window.innerWidth < 640 ? 60 : 64;
-        const top = el.getBoundingClientRect().top + window.scrollY - navOffset;
-        window.scrollTo({ top: top > 0 ? Math.round(top) : 0, behavior: 'smooth' });
-      }
-    }
+    smoothScrollTo(getTargetY(targetId));
   };
 
   /** Desktop nav click — works perfectly with onClick on non-touch devices. */
@@ -84,10 +110,15 @@ const Navbar = () => {
     setActiveSection(targetId);
     setIsMobileMenuOpen(false);
 
-    // One animation frame lets React flush the drawer-close update,
-    // then we scroll with no layout conflict.
+    // Calculate target BEFORE closing drawer (position stays the same since
+    // the navbar is fixed and drawer doesn't affect page layout).
+    // Two rAF frames: first lets React flush state, second lets the browser paint,
+    // then we start the smooth scroll for the cleanest experience.
+    const targetY = getTargetY(targetId);
     requestAnimationFrame(() => {
-      scrollToSection(targetId);
+      requestAnimationFrame(() => {
+        smoothScrollTo(targetY);
+      });
     });
   };
 

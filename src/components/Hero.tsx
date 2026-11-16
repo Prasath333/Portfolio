@@ -1,18 +1,30 @@
 import { motion } from 'framer-motion';
 import profileImage from '../assets/Confident Portrait in White Shirt.png';
 
+/** rAF-based smooth scroll with easeInOutQuad — works on all mobile browsers. */
+const smoothScrollTo = (targetY: number, duration = 650) => {
+  const startY = window.scrollY;
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 1) return;
+  const startTime = performance.now();
+  const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+  const step = (now: number) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    window.scrollTo(0, Math.round(startY + distance * ease(progress)));
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+};
+
 const Hero = () => {
   const handleHireClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const contactElement = document.getElementById('contact');
     if (contactElement) {
       const navOffset = window.innerWidth < 640 ? 60 : 64;
-      const elementPosition = contactElement.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - navOffset;
-      window.scrollTo({
-        top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
-        behavior: 'smooth',
-      });
+      const offsetPosition =
+        contactElement.getBoundingClientRect().top + window.scrollY - navOffset;
+      smoothScrollTo(offsetPosition > 0 ? Math.round(offsetPosition) : 0);
     }
   };
   return (
