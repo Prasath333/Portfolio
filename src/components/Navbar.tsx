@@ -1,12 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
+/* ─── Smooth scroll utility ────────────────────────────────────────────────
+   Custom rAF-based scroller with easeInOutCubic.
+   Works perfectly on iOS Safari, Android Chrome, and all desktop browsers.
+   Native `behavior:'smooth'` is unreliable on mobile — this replaces it.
+──────────────────────────────────────────────────────────────────────────── */
+let activeScrollRAF: number | null = null;
 
+const smoothScrollTo = (targetY: number, duration = 700) => {
+  // Cancel any in-progress scroll
+  if (activeScrollRAF !== null) {
+    cancelAnimationFrame(activeScrollRAF);
+    activeScrollRAF = null;
+  }
+
+  const startY = window.scrollY;
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 1) return;
+
+  const startTime = performance.now();
+
+  // easeInOutCubic — smooth start AND smooth stop, no jerk
+  const ease = (t: number): number =>
+    t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+
+  const step = (now: number) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    window.scrollTo(0, Math.round(startY + distance * ease(progress)));
+    if (progress < 1) {
+      activeScrollRAF = requestAnimationFrame(step);
+    } else {
+      activeScrollRAF = null;
+    }
+  };
+
+  activeScrollRAF = requestAnimationFrame(step);
+};
+
+/* ─── Target Y resolver ────────────────────────────────────────────────── */
+const getTargetY = (targetId: string): number => {
+  if (targetId === 'home') return 0;
+  const el = document.getElementById(targetId);
+  if (!el) return 0;
+  const navOffset = window.innerWidth < 640 ? 60 : 64;
+  const y = el.getBoundingClientRect().top + window.scrollY - navOffset;
+  return y > 0 ? Math.round(y) : 0;
+};
+
+/* ─── Navbar component ──────────────────────────────────────────────────── */
+const Navbar = () => {
+  const [isScrolled, setIsScrolled]         = useState(false);
+  const [isMobileMenuOpen, setMobileMenu]   = useState(false);
+  const [activeSection, setActiveSection]   = useState('home');
+
+  // Stores the section to scroll to after the drawer fully exits
+  const pendingNavRef = useRef<string | null>(null);
+
+  /* ── Active section tracker ── */
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 30);
@@ -19,15 +71,14 @@ const Navbar = () => {
       }
 
       const navOffset = window.innerWidth < 640 ? 60 : 64;
-      const scrollPosition = window.scrollY + navOffset + 40;
+      const scrollPos = window.scrollY + navOffset + 40;
 
-      for (const section of sections) {
-        const el = document.getElementById(section);
+      for (const id of sections) {
+        const el = document.getElementById(id);
         if (el) {
           const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(section);
+          if (scrollPos >= top && scrollPos < top + el.offsetHeight) {
+            setActiveSection(id);
             break;
           }
         }
@@ -39,89 +90,46 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { href: '#home', id: 'home', label: 'HOME' },
-    { href: '#about', id: 'about', label: 'ABOUT' },
-    { href: '#skills', id: 'skills', label: 'SKILLS' },
-    { href: '#experience', id: 'experience', label: 'EXPERIENCE' },
-    { href: '#projects', id: 'projects', label: 'PROJECTS' },
-    { href: '#what-i-built', id: 'what-i-built', label: 'SOLUTIONS' },
-    { href: '#ai-tools', id: 'ai-tools', label: 'AI TOOLS' },
-    { href: '#contact', id: 'contact', label: 'CONTACT' },
+    { href: '#home',        id: 'home',        label: 'HOME' },
+    { href: '#about',       id: 'about',       label: 'ABOUT' },
+    { href: '#skills',      id: 'skills',      label: 'SKILLS' },
+    { href: '#experience',  id: 'experience',  label: 'EXPERIENCE' },
+    { href: '#projects',    id: 'projects',    label: 'PROJECTS' },
+    { href: '#what-i-built',id: 'what-i-built',label: 'SOLUTIONS' },
+    { href: '#ai-tools',    id: 'ai-tools',    label: 'AI TOOLS' },
+    { href: '#contact',     id: 'contact',     label: 'CONTACT' },
   ];
 
-  /**
-   * Custom rAF-based smooth scroll with easeInOutQuad easing.
-   * Works on ALL mobile browsers including older iOS Safari & Android WebView
-   * where window.scrollTo({ behavior:'smooth' }) either jumps or is unsupported.
-   */
-  const smoothScrollTo = (targetY: number, duration = 650) => {
-    const startY = window.scrollY;
-    const distance = targetY - startY;
-    if (Math.abs(distance) < 1) return; // already there
-    const startTime = performance.now();
-
-    // easeInOutQuad — feels natural on mobile
-    const ease = (t: number) =>
-      t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      window.scrollTo(0, Math.round(startY + distance * ease(progress)));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-
-    requestAnimationFrame(step);
-  };
-
-  /** Resolve scroll target Y for a section id. */
-  const getTargetY = (targetId: string): number => {
-    if (targetId === 'home') return 0;
-    const el = document.getElementById(targetId);
-    if (!el) return 0;
-    const navOffset = window.innerWidth < 640 ? 60 : 64;
-    const top = el.getBoundingClientRect().top + window.scrollY - navOffset;
-    return top > 0 ? Math.round(top) : 0;
-  };
-
-  /** Scroll to section — used by both desktop and mobile. */
-  const scrollToSection = (targetId: string) => {
-    smoothScrollTo(getTargetY(targetId));
-  };
-
-  /** Desktop nav click — works perfectly with onClick on non-touch devices. */
+  /* ── Desktop click: update active state, then scroll after one rAF
+        (the rAF ensures React has painted the active-indicator change
+         before the scroll starts, eliminating any micro-stutter)       ── */
   const handleDesktopClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     const targetId = href.replace('#', '');
     setActiveSection(targetId);
-    scrollToSection(targetId);
+    requestAnimationFrame(() => smoothScrollTo(getTargetY(targetId)));
   };
 
-  /**
-   * Mobile nav tap.
-   * Uses <button> elements in the drawer (not <a> tags) so there is
-   * ZERO 300 ms touch delay — buttons respond instantly on all mobile browsers.
-   * onTouchStart fires the moment a finger touches the screen.
-   * We close the drawer first, then scroll in a rAF so there's no
-   * race between state update and scroll position calculation.
-   */
+  /* ── Mobile tap: close the drawer first, store the target, then
+        scroll ONLY after the drawer exit animation is 100% complete
+        via AnimatePresence onExitComplete — zero jerk guaranteed.      ── */
   const handleMobileTap = (href: string) => {
     const targetId = href.replace('#', '');
     setActiveSection(targetId);
-    setIsMobileMenuOpen(false);
-
-    // Calculate target BEFORE closing drawer (position stays the same since
-    // the navbar is fixed and drawer doesn't affect page layout).
-    // Two rAF frames: first lets React flush state, second lets the browser paint,
-    // then we start the smooth scroll for the cleanest experience.
-    const targetY = getTargetY(targetId);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        smoothScrollTo(targetY);
-      });
-    });
+    pendingNavRef.current = targetId;   // remember where to scroll
+    setMobileMenu(false);               // triggers drawer exit animation
   };
 
+  /* Called by AnimatePresence when the drawer has fully disappeared. */
+  const handleDrawerExitComplete = () => {
+    if (pendingNavRef.current) {
+      const targetId = pendingNavRef.current;
+      pendingNavRef.current = null;
+      smoothScrollTo(getTargetY(targetId));
+    }
+  };
+
+  /* ── JSX ── */
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -131,6 +139,7 @@ const Navbar = () => {
       }`}
     >
       <div className="portfolio-container flex items-center justify-between">
+
         {/* Brand / Logo */}
         <a
           href="#home"
@@ -141,7 +150,7 @@ const Navbar = () => {
           <span className="text-yellow-400">S</span>
         </a>
 
-        {/* Desktop Navigation Links */}
+        {/* Desktop nav links */}
         <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8">
           {navLinks.map((link) => {
             const isActive = activeSection === link.id;
@@ -167,11 +176,11 @@ const Navbar = () => {
           })}
         </nav>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Mobile hamburger */}
         <div className="lg:hidden flex items-center">
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            onClick={() => setMobileMenu((prev) => !prev)}
             className="p-2 text-gray-300 hover:text-white focus:outline-none touch-manipulation"
             aria-label="Toggle navigation menu"
             aria-expanded={isMobileMenuOpen}
@@ -181,46 +190,42 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ── Mobile Drawer ─────────────────────────────────────────────────── */}
-      <AnimatePresence>
+      {/* ── Mobile Drawer ─────────────────────────────────────────────────────
+           onExitComplete fires after the exit animation finishes.
+           That's when we start the scroll — zero overlap, zero jerk.
+      ──────────────────────────────────────────────────────────────────────── */}
+      <AnimatePresence onExitComplete={handleDrawerExitComplete}>
         {isMobileMenuOpen && (
           <motion.div
             key="mobile-drawer"
-            initial={{ opacity: 0, y: -6 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="lg:hidden bg-[#242424] border-b border-white/10 shadow-2xl"
           >
-            <div className="px-6 py-4 flex flex-col">
+            <div className="px-6 py-3 flex flex-col">
               {navLinks.map((link) => (
-                /*
-                 * KEY FIX: <button> instead of <a>.
-                 * Buttons have NO 300 ms tap-delay on any mobile browser.
-                 * onTouchStart fires the instant the finger touches — first tap works.
-                 */
                 <button
                   key={link.id}
                   type="button"
+                  /* onTouchStart: fires instantly on first tap, no 300 ms delay */
                   onTouchStart={() => handleMobileTap(link.href)}
                   onClick={() => handleMobileTap(link.href)}
                   className={`text-sm font-semibold tracking-wider py-3 w-full text-left transition-colors touch-manipulation ${
-                    activeSection === link.id
-                      ? 'text-yellow-400'
-                      : 'text-gray-300 active:text-yellow-400'
+                    activeSection === link.id ? 'text-yellow-400' : 'text-gray-300'
                   }`}
                   style={{
-                    WebkitTapHighlightColor: 'transparent',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
+                    WebkitTapHighlightColor: 'transparent',
                   }}
                 >
                   {link.label}
                 </button>
               ))}
 
-              {/* Hire Me */}
               <div className="pt-3 pb-1">
                 <button
                   type="button"

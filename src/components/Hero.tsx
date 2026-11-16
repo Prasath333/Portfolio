@@ -1,30 +1,31 @@
 import { motion } from 'framer-motion';
 import profileImage from '../assets/Confident Portrait in White Shirt.png';
 
-/** rAF-based smooth scroll with easeInOutQuad — works on all mobile browsers. */
-const smoothScrollTo = (targetY: number, duration = 650) => {
+/** Cancel-safe rAF smooth scroll with easeInOutCubic — works on all browsers. */
+let _heroRAF: number | null = null;
+const smoothScrollTo = (targetY: number, duration = 700) => {
+  if (_heroRAF !== null) { cancelAnimationFrame(_heroRAF); _heroRAF = null; }
   const startY = window.scrollY;
-  const distance = targetY - startY;
-  if (Math.abs(distance) < 1) return;
-  const startTime = performance.now();
-  const ease = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+  const dist = targetY - startY;
+  if (Math.abs(dist) < 1) return;
+  const t0 = performance.now();
+  const ease = (t: number) => t < 0.5 ? 4*t*t*t : (t-1)*(2*t-2)*(2*t-2)+1;
   const step = (now: number) => {
-    const progress = Math.min((now - startTime) / duration, 1);
-    window.scrollTo(0, Math.round(startY + distance * ease(progress)));
-    if (progress < 1) requestAnimationFrame(step);
+    const p = Math.min((now - t0) / duration, 1);
+    window.scrollTo(0, Math.round(startY + dist * ease(p)));
+    _heroRAF = p < 1 ? requestAnimationFrame(step) : null;
   };
-  requestAnimationFrame(step);
+  _heroRAF = requestAnimationFrame(step);
 };
 
 const Hero = () => {
   const handleHireClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    const contactElement = document.getElementById('contact');
-    if (contactElement) {
+    const el = document.getElementById('contact');
+    if (el) {
       const navOffset = window.innerWidth < 640 ? 60 : 64;
-      const offsetPosition =
-        contactElement.getBoundingClientRect().top + window.scrollY - navOffset;
-      smoothScrollTo(offsetPosition > 0 ? Math.round(offsetPosition) : 0);
+      const y = el.getBoundingClientRect().top + window.scrollY - navOffset;
+      smoothScrollTo(y > 0 ? Math.round(y) : 0);
     }
   };
   return (
