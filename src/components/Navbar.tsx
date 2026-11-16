@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -6,6 +6,9 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  // Tracks whether navigation was already triggered via pointer-down
+  // so the subsequent click event does not double-fire.
+  const navFiredRef = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,7 +16,6 @@ const Navbar = () => {
 
       const sections = ['home', 'about', 'skills', 'experience', 'projects', 'what-i-built', 'ai-tools', 'contact'];
 
-      // If scrolled near bottom of the page, activate the last section
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 60) {
         setActiveSection('contact');
         return;
@@ -50,36 +52,61 @@ const Navbar = () => {
     { href: '#contact', id: 'contact', label: 'CONTACT' },
   ];
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
-
+  /** Core scroll-and-close logic shared by both pointer and click paths. */
+  const executeNav = (href: string) => {
     const targetId = href.replace('#', '');
     setActiveSection(targetId);
+    setIsMobileMenuOpen(false);
 
-    // 1. Initiate navigation scroll first
     if (targetId === 'home') {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       const targetElement = document.getElementById(targetId);
       if (targetElement) {
         const navOffset = window.innerWidth < 640 ? 60 : 64;
         const elementPosition = targetElement.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.scrollY - navOffset;
-
         window.scrollTo({
           top: offsetPosition > 0 ? Math.round(offsetPosition) : 0,
           behavior: 'smooth',
         });
       }
     }
+  };
 
-    // 2. Automatically close the mobile drawer after navigation is initiated
-    setTimeout(() => {
-      setIsMobileMenuOpen(false);
-    }, 60);
+  /**
+   * Desktop click handler — plain onClick is fine on desktop.
+   */
+  const handleDesktopNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    executeNav(href);
+  };
+
+  /**
+   * Mobile pointer-down handler fires immediately on first touch/tap,
+   * before the 300 ms synthetic-click delay that mobile browsers impose.
+   * This is the key fix for the "need to tap twice" bug.
+   */
+  const handleMobilePointerDown = (e: React.PointerEvent<HTMLAnchorElement>, href: string) => {
+    // Only intercept touch/pen, not mouse (mouse already works via onClick)
+    if (e.pointerType === 'mouse') return;
+    e.preventDefault();
+    navFiredRef.current = true;
+    executeNav(href);
+  };
+
+  /**
+   * Mobile click handler — guards against double-firing when pointer-down
+   * already handled the navigation.
+   */
+  const handleMobileClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    if (navFiredRef.current) {
+      // Already handled by pointer-down; just reset the flag.
+      navFiredRef.current = false;
+      return;
+    }
+    executeNav(href);
   };
 
   return (
@@ -94,7 +121,7 @@ const Navbar = () => {
         {/* Brand / Logo */}
         <a
           href="#home"
-          onClick={(e) => handleNavClick(e, '#home')}
+          onClick={(e) => handleDesktopNavClick(e, '#home')}
           className="flex items-baseline gap-2 text-2xl sm:text-3xl font-black text-white tracking-tight hover:text-yellow-400 transition-colors flex-shrink-0 touch-manipulation"
         >
           <span>PRASATH</span>
@@ -109,7 +136,7 @@ const Navbar = () => {
               <a
                 key={link.href}
                 href={link.href}
-                onClick={(e) => handleNavClick(e, link.href)}
+                onClick={(e) => handleDesktopNavClick(e, link.href)}
                 className={`text-xs xl:text-sm font-semibold tracking-wider transition-colors duration-200 relative py-1 ${
                   isActive
                     ? 'text-yellow-400'
@@ -153,29 +180,35 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="lg:hidden bg-[#242424] border-b border-white/10 px-6 py-5 shadow-2xl overflow-hidden"
+            transition={{ duration: 0.2 }}
+            className="lg:hidden bg-[#242424] border-b border-white/10 shadow-2xl"
+            style={{ overflow: 'hidden' }}
           >
-            <div className="flex flex-col space-y-4">
+            <div className="px-6 py-5 flex flex-col space-y-1">
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className={`text-sm font-semibold tracking-wider py-2 block transition-colors touch-manipulation cursor-pointer ${
+                  // Fires immediately on first touch — no 300 ms delay
+                  onPointerDown={(e) => handleMobilePointerDown(e, link.href)}
+                  onClick={(e) => handleMobileClick(e, link.href)}
+                  className={`text-sm font-semibold tracking-wider py-3 block transition-colors touch-manipulation select-none ${
                     activeSection === link.id
                       ? 'text-yellow-400'
                       : 'text-gray-300 active:text-yellow-400'
                   }`}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {link.label}
                 </a>
               ))}
-              <div className="pt-2 flex flex-col gap-2.5">
+              <div className="pt-3">
                 <a
                   href="#contact"
-                  onClick={(e) => handleNavClick(e, '#contact')}
-                  className="btn-hire text-center w-full text-sm py-2.5 touch-manipulation cursor-pointer"
+                  onPointerDown={(e) => handleMobilePointerDown(e, '#contact')}
+                  onClick={(e) => handleMobileClick(e, '#contact')}
+                  className="btn-hire text-center w-full text-sm py-2.5 touch-manipulation select-none block"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   Hire Me
                 </a>
