@@ -40,7 +40,10 @@ body {
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior: smooth is intentionally removed — it conflicts with the
+     JavaScript rAF-based smooth scroll, causing dual-animation jerk/stutter.
+     All smooth scrolling is handled exclusively by window.scrollTo in JS. */
+  scroll-behavior: auto;
   scroll-padding-top: 4.25rem;
   background-color: var(--bg-primary);
   overflow-x: hidden;
